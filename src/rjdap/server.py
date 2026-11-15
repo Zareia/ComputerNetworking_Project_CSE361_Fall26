@@ -8,11 +8,13 @@ Responsibilities:
   count retransmitted duplicates (duplicate_results_dropped)
 """
 
-import argparse
+from argparse import ArgumentParser
+from socket import socket, AF_INET, SOCK_DGRAM
+
 
 
 def main():
-    parser = argparse.ArgumentParser(description="RJDAP Command Hub")
+    parser = ArgumentParser(description="RJDAP Command Hub")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=9000)
     parser.add_argument("--tasks", type=int, default=1000)
@@ -20,7 +22,14 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
     # TODO: implement server loop
-    raise NotImplementedError
+
+    with socket(AF_INET,SOCK_DGRAM) as server_socket:
+        print(f'UDP Server Listening on {args.host}:{args.port}')
+        data, client_address - server_socket.recvfrom(1024)
+        print(f'Recieved message from {client_address[0]}:{client_address[1]} : {data.decode()}')
+        server_socket.sendto('Message recieved'.encode, client_address)
+
+
 
 
 if __name__ == "__main__":
