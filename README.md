@@ -6,8 +6,6 @@ RJDAP is a UDP-based protocol that distributes stateless compute tasks from a ce
 **Command Hub** (server) to a pool of **worker nodes** (clients), guaranteeing each task
 result is counted **exactly once** even when packets are lost or delayed.
 
-> **Status:** project skeleton. Protocol, server and worker are not implemented yet —
-> the commands below describe the intended interface.
 
 ## Team
 

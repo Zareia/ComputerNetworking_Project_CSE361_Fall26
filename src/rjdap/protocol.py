@@ -1,10 +1,6 @@
-"""RJDAP wire format: header layout, message types, encode/decode helpers.
-
-Required header fields: Task_ID, Worker_ID, Attempt_Num, Payload_Checksum.
-The final bit layout must be documented in docs/rfc (Message Formats section).
-"""
-
 from enum import IntEnum
+import struct
+import zlib
 
 PROTOCOL_ID = 0x524A  # "RJ"
 VERSION = 1
@@ -13,21 +9,65 @@ MAX_PAYLOAD = 512  # bytes, per project constraint
 
 class MsgType(IntEnum):
     WORKER_JOIN = 0
-    HEARTBEAT = 1
-    TASK_DISPATCH = 2
-    TASK_RESULT = 3
-    ACK_RESULT = 4
+    JOIN_ACK = 1
+    HEARTBEAT = 2
+    TASK_DISPATCH = 3
+    TASK_RESULT = 4
+    ACK_RESULT = 5
 
 
-# TODO: choose the header layout and struct format string, e.g. "!HBBIHHI"
-HEADER_FORMAT = None
+HEADER_FORMAT = "!BBIHHHI"
+HEADER_SIZE = struct.calcsize(HEADER_FORMAT)
 
 
-def encode(msg_type, task_id, worker_id, attempt, payload=b""):
-    """Build a packet: header + payload. TODO."""
-    raise NotImplementedError
+def encode_message(msg_type, worker_id, task_id=0, attempt_num=0, payload=b""):
+
+    if isinstance(payload, str):
+        payload = payload.encode("utf-8")
+    if len(payload) > MAX_PAYLOAD:
+        raise ValueError("Payload exceeds 512 bytes")
 
 
-def decode(data):
-    """Parse a packet and verify the checksum. TODO."""
-    raise NotImplementedError
+
+    checksum = zlib.crc32(payload)
+
+    header = struct.pack(
+        HEADER_FORMAT,
+        VERSION,
+        msg_type,
+        task_id,
+        worker_id,
+        attempt_num,
+        len(payload),
+        checksum
+    )
+
+    return header + payload
+
+
+def decode_message(data):
+
+    if len(data) < HEADER_SIZE:
+        raise ValueError("Packet is smaller than the header")
+
+    version,msg_type,task_id,worker_id,attempt,payload_length,checksum = struct.unpack(HEADER_FORMAT,data[:HEADER_SIZE])
+
+    payload = data[HEADER_SIZE:]
+
+    if version != VERSION:
+        raise ValueError("Unsupported protocol version")
+    if payload_length > MAX_PAYLOAD:
+        raise ValueError("Payload exceeds 512 bytes")
+    if payload_length != len(payload):
+        raise ValueError("Invalid payload length")
+    if checksum != (zlib.crc32(payload)):
+        raise ValueError("Checksum Mismatch")
+
+    return {
+        "version" : version,
+        "message_type" : msg_type,
+        "task_id" : task_id,
+        "worker_id" : worker_id,
+        "attempt_number" : attempt,
+        "payload" : payload
+    }
